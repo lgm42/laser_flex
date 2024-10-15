@@ -6,6 +6,9 @@ from PIL import ImageDraw
 import numpy as np
 import svgutils.transform as sg
 
+from svglib.svglib import svg2rlg
+from reportlab.graphics import renderPM
+
 OFFSET_BETWEEN_LINES = 5
 VERY_MIN_LINE_HEIGHT = 3
 MIN_LINE_HEIGHT = 20
@@ -19,7 +22,14 @@ SVG_FILE_OUT_PNG = f'{FILE_NAME_STEM}_out.png'
 
 input_svg = sg.fromfile(SVG_FILE_IN_SVG)
 
-image = PIL.Image.open(SVG_FILE_IN_PNG)
+# we create a png temp file from the svg to rasterize the picture
+svg_to_raster = svg2rlg(SVG_FILE_IN_SVG)
+svg_to_raster.scale(1, 1)
+# svg_to_raster.width=800
+# svg_to_raster.height=800
+image = renderPM.drawToPIL(svg_to_raster)
+viewbox = list([float(i) for i in input_svg.root.attrib['viewBox'].split()])
+
 data = np.asarray(image)
 out_img = image.copy()
 lines_to_draw = []
@@ -29,7 +39,7 @@ rows, cols, _ = data.shape
 
 channel = data[:, :, 0]
 im = PIL.Image.fromarray(channel)
-im.save("forme_test.jpg")
+image.save(SVG_FILE_IN_PNG)
 
 # looking for the index of the cols
 cols_to_manage = list([x[0] for x in enumerate(channel.T) if any([(y != 255) for y in x[1]])])
@@ -114,8 +124,14 @@ while col_index < end_col:
     col_index += OFFSET_BETWEEN_LINES
 
 draw = ImageDraw.Draw(out_img) 
+x_scale = viewbox[2] / image.width
+y_scale = viewbox[3] / image.height
 for (x1, y1, x2, y2) in lines_to_draw:
+    
     draw.line((x1, y1, x2, y2), fill=(255, 0, 0, 255))
+    input_svg.append(sg.LineElement([(x1 * x_scale, y1 * y_scale), (x2 * x_scale, y2 * y_scale)]))
+    
+input_svg.save(SVG_FILE_OUT_SVG)
 
 out_img.save(SVG_FILE_OUT_PNG)
 out_img.show()
