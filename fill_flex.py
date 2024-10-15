@@ -53,73 +53,114 @@ while col_index < end_col:
     col = channel[:, col_index]
     if any(item in col for item in col if item != 255):
         print(f'{col_index}')
-        # looking for the first row and the last
-        #getting data with values
+        
+        finished = False
+        
         indexes = [x for x,v in list(enumerate(col)) if v != 255]
         start_row = np.min(indexes)
-        end_row = np.max(indexes)
-        print(f'col {col_index}: start row {start_row}, end row {end_row}')
+        end_row = start_row
         
-        full_height = end_row - start_row
-        current_y = start_row
-        
-        if cols_drawn % 2 == 0:
-            # even line, we begin with a line and finish with a line inserting as many spaces and lines as needed
-            # LSLS....L
-            # with 58 pixels height and a min line height of 20 px
-            # we have 2 lines of 24 pixels sperated by a space of 10 px
-            # there it is at least 2 lines and there lines -1 spaces
-            # n must be an integer
-            # full_height = n * lines + (n - 1) * spaces
-            # fh = n * l + n * s - s
-            # fh + s = n (l + s)
-            # n = (fh + s) / (l + s)
-            # we take entire div round to the lower and determine l
-            # l + s = (fh + s) / n
-            # l = (fh + s) / n - s
+        while end_row < image.height and col[end_row] != 255:
+            end_row += 1
             
-            # check if it too small
-            if SPACE_HEIGHT + 2 * MIN_LINE_HEIGHT > full_height:
-                # two cases no space to put a small line each side, we do nothing
-                # or we compute the size of the lines
-                if SPACE_HEIGHT + 2 * VERY_MIN_LINE_HEIGHT > full_height:
-                    # we do nothing
-                    n = 0
-                else:
-                    n = 2
-                    l = np.floor((full_height - SPACE_HEIGHT) / 2)
-            else:       
-                n = (full_height + SPACE_HEIGHT) / (MIN_LINE_HEIGHT + SPACE_HEIGHT)
-                n = math.floor(n)
-                l = (full_height + SPACE_HEIGHT) / n - SPACE_HEIGHT
-        else:
-            # odd line, the same but we begin with a space and we have space - 1 lines
-            # fh = n * l + n * s + s
-            # fh - s = n (l + s)
-            # n = (fh - s) / (l + s)
-            # we take entire div round to the lower and determine l
-            # l + s = (fh - s) / n
-            # l = (fh - s) / n - s
-            # check if it too small
-            if SPACE_HEIGHT * 2 + MIN_LINE_HEIGHT > full_height:
-                # two cases no space to put a small line and two spaces, we do nothing
-                # or we compute the size of the line
-                if SPACE_HEIGHT * 2 + VERY_MIN_LINE_HEIGHT > full_height:
-                    # we do nothing
-                    n = 0
-                else:
-                    n = 1
-                    l = full_height - SPACE_HEIGHT * 2
+        # we look for the end of the shape
+        while end_row < image.height and col[end_row] == 255:
+            end_row += 1
+                
+        while not finished:
+            # looking for the first row with a line
+
+            print(f'col {col_index}: start row {start_row}, end row {end_row}')
+            
+            full_height = end_row - start_row
+            current_y = start_row
+            
+            if cols_drawn % 2 == 0:
+                # even line, we begin with a line and finish with a line inserting as many spaces and lines as needed
+                # LSLS....L
+                # with 58 pixels height and a min line height of 20 px
+                # we have 2 lines of 24 pixels sperated by a space of 10 px
+                # there it is at least 2 lines and there lines -1 spaces
+                # n must be an integer
+                # full_height = n * lines + (n - 1) * spaces
+                # fh = n * l + n * s - s
+                # fh + s = n (l + s)
+                # n = (fh + s) / (l + s)
+                # we take entire div round to the lower and determine l
+                # l + s = (fh + s) / n
+                # l = (fh + s) / n - s
+                
+                # check if it too small
+                if SPACE_HEIGHT + 2 * MIN_LINE_HEIGHT > full_height:
+                    # two cases no space to put a small line each side, we do nothing
+                    # or we compute the size of the lines
+                    if SPACE_HEIGHT + 2 * VERY_MIN_LINE_HEIGHT > full_height:
+                        # we do nothing
+                        n = 0
+                    else:
+                        n = 2
+                        l = np.floor((full_height - SPACE_HEIGHT) / 2)
+                else:       
+                    n = (full_height + SPACE_HEIGHT) / (MIN_LINE_HEIGHT + SPACE_HEIGHT)
+                    n = math.floor(n)
+                    l = (full_height + SPACE_HEIGHT) / n - SPACE_HEIGHT
+            else:
+                # odd line, the same but we begin with a space and we have space - 1 lines
+                # fh = n * l + n * s + s
+                # fh - s = n (l + s)
+                # n = (fh - s) / (l + s)
+                # we take entire div round to the lower and determine l
+                # l + s = (fh - s) / n
+                # l = (fh - s) / n - s
+                # check if it too small
+                if SPACE_HEIGHT * 2 + MIN_LINE_HEIGHT > full_height:
+                    # two cases no space to put a small line and two spaces, we do nothing
+                    # or we compute the size of the line
+                    if SPACE_HEIGHT * 2 + VERY_MIN_LINE_HEIGHT > full_height:
+                        # we do nothing
+                        n = 0
+                    else:
+                        n = 1
+                        l = full_height - SPACE_HEIGHT * 2
+                        current_y += SPACE_HEIGHT
+                else:  
+                    n = (full_height - SPACE_HEIGHT) / (MIN_LINE_HEIGHT + SPACE_HEIGHT)
+                    n = math.floor(n)
+                    l = (full_height - SPACE_HEIGHT) / n - SPACE_HEIGHT
+                    # we offset the first line by a space
                     current_y += SPACE_HEIGHT
-            else:  
-                n = (full_height - SPACE_HEIGHT) / (MIN_LINE_HEIGHT + SPACE_HEIGHT)
-                n = math.floor(n)
-                l = (full_height - SPACE_HEIGHT) / n - SPACE_HEIGHT
-                # we offset the first line by a space
-                current_y += SPACE_HEIGHT
-        for i in range(n):
-            lines_to_draw.append((col_index, current_y, col_index, current_y + l))
-            current_y = current_y + l + SPACE_HEIGHT
+            for i in range(n):
+                lines_to_draw.append((col_index, current_y, col_index, current_y + l))
+                current_y = current_y + l + SPACE_HEIGHT
+            
+            # got to look another shape in the column
+            # we skip the next empty area
+            
+            start_row = end_row
+            # looking for next shape
+            while start_row < image.height and col[start_row] == 255:
+                start_row += 1
+            
+            while start_row < image.height and col[start_row] != 255:
+                start_row += 1
+            
+            while start_row < image.height and col[start_row] == 255:
+                start_row += 1
+            
+            if start_row >= image.height:
+                finished = True
+            
+            # looking for the end row
+            end_row = start_row
+            while end_row < image.height and col[end_row] != 255:
+                end_row += 1
+                
+            # we look for the end of the shape
+            while end_row < image.height and col[end_row] == 255:
+                end_row += 1
+            
+            finished = True
+            
         cols_drawn += 1
     col_index += OFFSET_BETWEEN_LINES
 
