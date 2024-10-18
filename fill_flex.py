@@ -13,7 +13,7 @@ WOOD_DEPTH = 3  # mm
 
 OFFSET_BETWEEN_LINES = WOOD_DEPTH / 2    # mm
 VERY_MIN_LINE_HEIGHT = 3    # mm
-MIN_LINE_HEIGHT = 20    # mm
+MIN_LINE_HEIGHT = 15    # mm
 SPACE_HEIGHT = WOOD_DEPTH    # mm
 
 FILE_NAME_STEM = 'baleine_test2'
@@ -60,8 +60,6 @@ while col_index < end_col:
     col = channel[:, col_index]
     if any(item in col for item in col if item != 255):
         
-        finished = False
-        
         indexes = [x for x,v in list(enumerate(col)) if v != 255]
         start_row = np.min(indexes)
         end_row = start_row
@@ -71,81 +69,62 @@ while col_index < end_col:
             
         # we go back one row
         end_row -= 1
-                
-        while not finished:
-            # looking for the first row with a line
-            
+        
+        # we got an area to fill
+        col_finished = False
+        while not col_finished:           
             full_height = end_row - start_row
-            current_y = start_row
-            
+                   
             if cols_drawn % 2 == 0:
-                # even line, we begin with a line and finish with a line inserting as many spaces and lines as needed
-                # LSLS....L
-                # with 58 pixels height and a min line height of 20 px
-                # we have 2 lines of 24 pixels sperated by a space of 10 px
-                # there it is at least 2 lines and there lines -1 spaces
-                # n must be an integer
-                # full_height = n * lines + (n - 1) * spaces
-                # fh = n * l + n * s - s
-                # fh + s = n (l + s)
-                # n = (fh + s) / (l + s)
-                # we take entire div round to the lower and determine l
-                # l + s = (fh + s) / n
-                # l = (fh + s) / n - s
+                # even line
+                # we begin with a space
+                # and we draw a line with a max length of fh
+                # or the remaining height
+                # and we redo until the end
                 
-                # check if it too small
-                if SPACE_HEIGHT + 2 * MIN_LINE_HEIGHT > full_height:
-                    # two cases no space to put a small line each side, we do nothing
-                    # or we compute the size of the lines
-                    if SPACE_HEIGHT + 2 * VERY_MIN_LINE_HEIGHT > full_height:
-                        # we do nothing
-                        n = 0
-                    else:
-                        n = 2
-                        l = np.floor((full_height - SPACE_HEIGHT) / 2)
-                else:       
-                    n = (full_height + SPACE_HEIGHT) / (MIN_LINE_HEIGHT + SPACE_HEIGHT)
-                    n = math.floor(n)
-                    l = (full_height + SPACE_HEIGHT) / n - SPACE_HEIGHT
-            else:
-                # odd line, the same but we begin with a space and we have space - 1 lines
-                # fh = n * l + n * s + s
-                # fh - s = n (l + s)
-                # n = (fh - s) / (l + s)
-                # we take entire div round to the lower and determine l
-                # l + s = (fh - s) / n
-                # l = (fh - s) / n - s
-                # check if it too small
-                if SPACE_HEIGHT * 2 + MIN_LINE_HEIGHT > full_height:
-                    # two cases no space to put a small line and two spaces, we do nothing
-                    # or we compute the size of the line
-                    if SPACE_HEIGHT * 2 + VERY_MIN_LINE_HEIGHT > full_height:
-                        # we do nothing
-                        n = 0
-                    else:
-                        n = 1
-                        l = full_height - SPACE_HEIGHT * 2
+                current_y = start_row
+                finished = False
+                while not finished:
+                    if current_y + SPACE_HEIGHT < end_row:
                         current_y += SPACE_HEIGHT
-                else:  
-                    n = (full_height - SPACE_HEIGHT) / (MIN_LINE_HEIGHT + SPACE_HEIGHT)
-                    n = math.floor(n)
-                    l = (full_height - SPACE_HEIGHT) / n - SPACE_HEIGHT
-                    # we offset the first line by a space
-                    current_y += SPACE_HEIGHT
-            for i in range(n):
-                lines_to_draw.append((col_index, current_y, col_index, current_y + l))
-                current_y = current_y + l + SPACE_HEIGHT
-            
-            # got to look another shape in the column
-            # we skip the next empty area
-            
+                        lh = min(MIN_LINE_HEIGHT, end_row - current_y)
+                        end_y = current_y + lh
+                    
+                        lines_to_draw.append((col_index, current_y, col_index, end_y))
+                    
+                        current_y = end_y
+                    
+                        if end_y == end_row:
+                            finished = True
+                    else:
+                        finished = True
+                    
+            else:
+                # we do the same beginning by the end
+                current_y = end_row
+                finished = False
+                while not finished:
+                    if current_y - SPACE_HEIGHT > start_row:
+                        current_y -= SPACE_HEIGHT
+                        lh = min(MIN_LINE_HEIGHT, current_y - start_row)
+                        end_y = current_y - lh
+                    
+                        lines_to_draw.append((col_index, current_y, col_index, end_y))
+                    
+                        current_y = end_y
+                    
+                        if end_y == start_row:
+                            finished = True
+                    else:
+                        finished = True
+                
             start_row = end_row + 1
             # looking for next shape
             while start_row < image.height and col[start_row] == 255:
                 start_row += 1
             
             if start_row >= image.height:
-                finished = True
+                col_finished = True
             
             # looking for the end row
             end_row = start_row
