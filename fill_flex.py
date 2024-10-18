@@ -9,10 +9,12 @@ import svgutils.transform as sg
 from svglib.svglib import svg2rlg
 from reportlab.graphics import renderPM
 
-OFFSET_BETWEEN_LINES = 5
-VERY_MIN_LINE_HEIGHT = 3
-MIN_LINE_HEIGHT = 20
-SPACE_HEIGHT = 10
+WOOD_DEPTH = 3  # mm
+
+OFFSET_BETWEEN_LINES = WOOD_DEPTH / 2    # mm
+VERY_MIN_LINE_HEIGHT = 3    # mm
+MIN_LINE_HEIGHT = 20    # mm
+SPACE_HEIGHT = WOOD_DEPTH    # mm
 
 FILE_NAME_STEM = 'baleine_test2'
 SVG_FILE_IN_SVG = f'{FILE_NAME_STEM}.svg'
@@ -37,6 +39,14 @@ rows, cols, _ = data.shape
 channel = data[:, :, 0]
 im = PIL.Image.fromarray(channel)
 image.save(SVG_FILE_IN_PNG)
+
+x_scale = viewbox[2] / image.width
+y_scale = viewbox[3] / image.height
+
+OFFSET_BETWEEN_LINES = round(OFFSET_BETWEEN_LINES / x_scale)
+VERY_MIN_LINE_HEIGHT = round(VERY_MIN_LINE_HEIGHT / y_scale)
+MIN_LINE_HEIGHT = round(MIN_LINE_HEIGHT / y_scale)
+SPACE_HEIGHT = round(SPACE_HEIGHT / y_scale)
 
 # looking for the index of the cols
 cols_to_manage = list([x[0] for x in enumerate(channel.T) if any([(y != 255) for y in x[1]])])
@@ -149,8 +159,8 @@ while col_index < end_col:
     col_index += OFFSET_BETWEEN_LINES
 
 draw = ImageDraw.Draw(out_img) 
-x_scale = viewbox[2] / image.width
-y_scale = viewbox[3] / image.height
+
+print(f'x scale = {x_scale}, y scale = {y_scale}')
 for (x1, y1, x2, y2) in lines_to_draw:
     
     draw.line((x1, y1, x2, y2), fill=(255, 0, 0, 255))
