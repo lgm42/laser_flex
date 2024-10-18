@@ -14,7 +14,7 @@ VERY_MIN_LINE_HEIGHT = 3
 MIN_LINE_HEIGHT = 20
 SPACE_HEIGHT = 10
 
-FILE_NAME_STEM = 'baleine_test'
+FILE_NAME_STEM = 'baleine_test2'
 SVG_FILE_IN_SVG = f'{FILE_NAME_STEM}.svg'
 SVG_FILE_IN_PNG = f'{FILE_NAME_STEM}.png'
 SVG_FILE_OUT_SVG = f'{FILE_NAME_STEM}_out.svg'
@@ -25,15 +25,12 @@ input_svg = sg.fromfile(SVG_FILE_IN_SVG)
 # we create a png temp file from the svg to rasterize the picture
 svg_to_raster = svg2rlg(SVG_FILE_IN_SVG)
 svg_to_raster.scale(1, 1)
-# svg_to_raster.width=800
-# svg_to_raster.height=800
 image = renderPM.drawToPIL(svg_to_raster)
 viewbox = list([float(i) for i in input_svg.root.attrib['viewBox'].split()])
 
 data = np.asarray(image)
 out_img = image.copy()
 lines_to_draw = []
-print(data.shape) # (height, width, channels)
 
 rows, cols, _ = data.shape
 
@@ -52,7 +49,6 @@ col_index = start_col + OFFSET_BETWEEN_LINES
 while col_index < end_col:
     col = channel[:, col_index]
     if any(item in col for item in col if item != 255):
-        print(f'{col_index}')
         
         finished = False
         
@@ -63,14 +59,11 @@ while col_index < end_col:
         while end_row < image.height and col[end_row] != 255:
             end_row += 1
             
-        # we look for the end of the shape
-        while end_row < image.height and col[end_row] == 255:
-            end_row += 1
+        # we go back one row
+        end_row -= 1
                 
         while not finished:
             # looking for the first row with a line
-
-            print(f'col {col_index}: start row {start_row}, end row {end_row}')
             
             full_height = end_row - start_row
             current_y = start_row
@@ -136,14 +129,8 @@ while col_index < end_col:
             # got to look another shape in the column
             # we skip the next empty area
             
-            start_row = end_row
+            start_row = end_row + 1
             # looking for next shape
-            while start_row < image.height and col[start_row] == 255:
-                start_row += 1
-            
-            while start_row < image.height and col[start_row] != 255:
-                start_row += 1
-            
             while start_row < image.height and col[start_row] == 255:
                 start_row += 1
             
@@ -155,11 +142,8 @@ while col_index < end_col:
             while end_row < image.height and col[end_row] != 255:
                 end_row += 1
                 
-            # we look for the end of the shape
-            while end_row < image.height and col[end_row] == 255:
-                end_row += 1
-            
-            finished = True
+            # we go back one row
+            end_row -= 1
             
         cols_drawn += 1
     col_index += OFFSET_BETWEEN_LINES
@@ -170,15 +154,9 @@ y_scale = viewbox[3] / image.height
 for (x1, y1, x2, y2) in lines_to_draw:
     
     draw.line((x1, y1, x2, y2), fill=(255, 0, 0, 255))
-    input_svg.append(sg.LineElement([(x1 * x_scale, y1 * y_scale), (x2 * x_scale, y2 * y_scale)]))
+    input_svg.append(sg.LineElement([(x1 * x_scale, y1 * y_scale), (x2 * x_scale, y2 * y_scale)], color="blue"))
     
 input_svg.save(SVG_FILE_OUT_SVG)
 
 out_img.save(SVG_FILE_OUT_PNG)
 out_img.show()
-# layout = ColumnLayout(5)
-
-# svg = fromfile("forme_test.svg")
-# layout.add_figure(svg)
-
-# layout.save("out.svg")
